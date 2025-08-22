@@ -540,29 +540,39 @@ def index():
     end_date_str = request.args.get('end_date', date.today().strftime('%Y-%m-%d'))
     start_date_str = request.args.get('start_date', (date.today() - timedelta(days=29)).strftime('%Y-%m-%d'))
 
-    # Fetch data
-    summary = database.get_transactions_summary(start_date_str, end_date_str)
-    # Ledger totals should not be affected by date range
-    ledger_totals = database.get_unsettled_ledger_totals()
-    daily_series = database.get_daily_income_expense_series(start_date_str, end_date_str)
-    income_by_service = database.get_income_by_service(start_date_str, end_date_str)
+    # Use the new, correct function
+    period_balances = database.get_account_balances(start_date_str, end_date_str)
+    all_time_balances = database.get_account_balances() # For A/R and A/P which are point-in-time
 
-    # Prepare data for charts
-    line_chart_labels = [d['transaction_date'] for d in daily_series]
-    line_chart_income = [d['daily_income'] for d in daily_series]
-    line_chart_expense = [d['daily_expense'] for d in daily_series]
+    total_revenue = 0
+    total_expense = 0
+    total_receivables = 0
+    total_payables = 0
 
-    pie_chart_labels = [d['name'] for d in income_by_service]
-    pie_chart_data = [d['total_amount'] for d in income_by_service]
+    for acc in period_balances:
+        balance = (acc['total_debit'] or 0) - (acc['total_credit'] or 0)
+        if acc['type'] == 'Revenue':
+            total_revenue += -balance # Credits are positive for revenue
+        elif acc['type'] == 'Expense':
+            total_expense += balance # Debits are positive for expense
+
+    for acc in all_time_balances:
+        balance = (acc['total_debit'] or 0) - (acc['total_credit'] or 0)
+        if acc['name'] == 'حساب دریافتنی': # Look up by name
+            total_receivables = balance
+        elif acc['name'] == 'حساب پرداختنی': # Look up by name
+            total_payables = -balance
+
+    net_profit = total_revenue - total_expense
+
+    # --- Charts are temporarily disabled as their logic needs to be rewritten ---
 
     return render_template('index.html',
-                           summary=summary,
-                           ledger_totals=ledger_totals,
-                           line_chart_labels=line_chart_labels,
-                           line_chart_income=line_chart_income,
-                           line_chart_expense=line_chart_expense,
-                           pie_chart_labels=pie_chart_labels,
-                           pie_chart_data=pie_chart_data,
+                           total_revenue=total_revenue,
+                           total_expense=total_expense,
+                           net_profit=net_profit,
+                           total_receivables=total_receivables,
+                           total_payables=total_payables,
                            start_date=start_date_str,
                            end_date=end_date_str)
 

@@ -19,94 +19,32 @@
 <!-- Stat Cards -->
 <div class="stat-cards">
     <div class="card">
-        <h4>درآمد کل</h4>
-        <p>{{ "{:,.0f}".format(summary['total_income'] or 0) }} ریال</p>
+        <h4>درآمد کل (در دوره انتخابی)</h4>
+        <p>{{ "{:,.0f}".format(total_revenue or 0) }} ریال</p>
     </div>
     <div class="card">
-        <h4>هزینه کل</h4>
-        <p>{{ "{:,.0f}".format(summary['total_expenses'] or 0) }} ریال</p>
+        <h4>هزینه کل (در دوره انتخابی)</h4>
+        <p>{{ "{:,.0f}".format(total_expense or 0) }} ریال</p>
     </div>
     <div class="card">
-        <h4>سود خالص</h4>
-        <p>{{ "{:,.0f}".format((summary['total_income'] or 0) - (summary['total_expenses'] or 0)) }} ریال</p>
+        <h4>سود خالص (در دوره انتخابی)</h4>
+        <p class="{% if net_profit < 0 %}text-danger{% endif %}">{{ "{:,.0f}".format(net_profit or 0) }} ریال</p>
     </div>
     <div class="card">
-        <h4>جمع طلب‌ها (پرداخت نشده)</h4>
-        <p>{{ "{:,.0f}".format(ledger_totals['total_receivables'] or 0) }} ریال</p>
+        <h4>جمع کل طلب‌ها (مانده حساب)</h4>
+        <p>{{ "{:,.0f}".format(total_receivables or 0) }} ریال</p>
     </div>
     <div class="card">
-        <h4>جمع بدهی‌ها (پرداخت نشده)</h4>
-        <p>{{ "{:,.0f}".format(ledger_totals['total_payables'] or 0) }} ریال</p>
+        <h4>جمع کل بدهی‌ها (مانده حساب)</h4>
+        <p>{{ "{:,.0f}".format(total_payables or 0) }} ریال</p>
     </div>
 </div>
 
 <!-- Charts -->
 <div class="charts-grid">
     <div class="card">
-        <h4>روند درآمد و هزینه</h4>
-        <canvas id="incomeExpenseChart"></canvas>
-    </div>
-    <div class="card">
-        <h4>تفکیک درآمد بر اساس خدمت</h4>
-        <canvas id="incomeByServiceChart"></canvas>
+        <h4>نمودارها</h4>
+        <p>نمودارها به طور موقت غیرفعال شده‌اند و در نسخه بعدی بازنویسی خواهند شد.</p>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    Chart.defaults.font.family = "inherit";
-    Chart.defaults.color = '#e0e0e0';
-
-    // Line Chart
-    const ctxLine = document.getElementById('incomeExpenseChart').getContext('2d');
-    new Chart(ctxLine, {
-        type: 'line',
-        data: {
-            labels: {{ line_chart_labels|tojson }},
-            datasets: [{
-                label: 'درآمد',
-                data: {{ line_chart_income|tojson }},
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                fill: true,
-                tension: 0.1
-            }, {
-                label: 'هزینه',
-                data: {{ line_chart_expense|tojson }},
-                borderColor: 'rgba(255, 99, 132, 1)',
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                fill: true,
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true } }
-        }
-    });
-
-    // Pie Chart
-    const ctxPie = document.getElementById('incomeByServiceChart').getContext('2d');
-    new Chart(ctxPie, {
-        type: 'pie',
-        data: {
-            labels: {{ pie_chart_labels|tojson }},
-            datasets: [{
-                label: 'درآمد',
-                data: {{ pie_chart_data|tojson }},
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.8)',
-                    'rgba(54, 162, 235, 0.8)',
-                    'rgba(255, 206, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)',
-                    'rgba(153, 102, 255, 0.8)',
-                    'rgba(255, 159, 64, 0.8)'
-                ],
-                hoverOffset: 4
-            }]
-        },
-        options: { responsive: true }
-    });
-});
-</script>
 {% endblock %}
