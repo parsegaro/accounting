@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (services.length > 0) {
         createRow();
     } else {
-        container.innerHTML = '<p>برای ثبت درآمد، ابتدا باید حداقل یک خدمت را در صفحه <a href="{{ url_for(\'settings\') }}">تنظیمات</a> تعریف کنید.</p>';
+        container.innerHTML = '<p>برای ثبت درآمد، ابتدا باید حداقل یک خدمت را در صفحه <a href="{{ url_for("settings") }}">تنظیمات</a> تعریف کنید.</p>';
         addRowBtn.style.display = 'none';
     }
 
