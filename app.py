@@ -187,11 +187,44 @@ def delete_staff(id):
     flash('عضو با موفقیت حذف شد.', 'success')
     return redirect(url_for('settings'))
 
+@app.route('/transaction/reverse/<int:transaction_id>', methods=('POST',))
+@login_required
+def reverse_transaction(transaction_id):
+    original_entries = database.get_journal_entries_by_transaction_id(transaction_id)
+
+    if original_entries:
+        # Get description from the first entry's transaction meta
+        trans_meta = database.get_transaction_by_id(transaction_id) # Need to create this function
+        new_description = f"Reversal of Transaction #{transaction_id}: {trans_meta['description']}"
+
+        reversed_entries = []
+        for entry in original_entries:
+            # Swap debit and credit
+            reversed_entries.append((entry['account_id'], entry['credit'], entry['debit']))
+
+        database.create_journal_entry(date.today().strftime('%Y-%m-%d'), new_description, reversed_entries)
+        flash(f'تراکنش شماره {transaction_id} با موفقیت معکوس شد.', 'success')
+    else:
+        flash('خطا: تراکنش مورد نظر یافت نشد.', 'error')
+
+    return redirect(url_for('ledger'))
+
 @app.route('/ledger')
 @login_required
 def ledger():
-    entries = database.get_all_journal_entries()
-    return render_template('ledger.html', entries=entries)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    account_id = request.args.get('account_id')
+
+    entries = database.get_journal_entries_filtered(start_date, end_date, account_id)
+    accounts = database.get_accounts()
+
+    return render_template('ledger.html',
+                           entries=entries,
+                           accounts=accounts,
+                           selected_account_id=int(account_id) if account_id else None,
+                           start_date=start_date,
+                           end_date=end_date)
 
 @app.route('/export/ledger')
 @login_required
@@ -222,6 +255,85 @@ def export_ledger():
         mimetype="text/csv",
         headers={"Content-disposition":
                  "attachment; filename=ledger_export.csv"})
+
+@app.route('/reports/balance-sheet')
+@login_required
+def balance_sheet():
+    balances = database.get_account_balances()
+
+    assets = []
+    liabilities = []
+    equity = []
+    total_assets = 0
+    total_liabilities = 0
+    total_equity = 0
+
+    for acc in balances:
+        balance = (acc['total_debit'] or 0) - (acc['total_credit'] or 0)
+        # For Liability, Equity, we flip the sign because credits are positive
+        if acc['type'] in ('Liability', 'Equity'):
+            balance = -balance
+
+        if acc['type'] == 'Asset':
+            assets.append({'name': acc['name'], 'balance': balance})
+            total_assets += balance
+        elif acc['type'] == 'Liability':
+            liabilities.append({'name': acc['name'], 'balance': balance})
+            total_liabilities += balance
+        elif acc['type'] == 'Equity':
+            equity.append({'name': acc['name'], 'balance': balance})
+            total_equity += balance
+
+    return render_template('reports/balance_sheet.html',
+                           assets=assets,
+                           liabilities=liabilities,
+                           equity=equity,
+                           total_assets=total_assets,
+                           total_liabilities=total_liabilities,
+                           total_equity=total_equity,
+                           today_date=date.today().strftime('%Y-%m-%d'))
+
+
+@app.route('/reports/trial-balance')
+@login_required
+def trial_balance():
+    balances = database.get_account_balances()
+
+    debit_total = 0
+    credit_total = 0
+
+    accounts_with_balance = []
+    for acc in balances:
+        balance = (acc['total_debit'] or 0) - (acc['total_credit'] or 0)
+        debit_balance = 0
+        credit_balance = 0
+
+        if acc['type'] in ('Asset', 'Expense'):
+            if balance > 0:
+                debit_balance = balance
+            else:
+                credit_balance = -balance
+        else: # Liability, Equity, Revenue
+            if balance < 0:
+                credit_balance = -balance
+            else:
+                debit_balance = balance
+
+        if debit_balance > 0 or credit_balance > 0:
+            accounts_with_balance.append({
+                'name': acc['name'],
+                'debit': debit_balance,
+                'credit': credit_balance
+            })
+            debit_total += debit_balance
+            credit_total += credit_balance
+
+    return render_template('reports/trial_balance.html',
+                           accounts=accounts_with_balance,
+                           debit_total=debit_total,
+                           credit_total=credit_total,
+                           today_date=date.today().strftime('%Y-%m-%d'))
+
 
 @app.route('/reports')
 @login_required

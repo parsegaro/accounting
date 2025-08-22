@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}ترازنامه{% endblock %}
+{% block content %}
+<div class="header-with-controls">
+    <h2>ترازنامه (Balance Sheet)</h2>
+    <button class="btn" onclick="window.print()">چاپ</button>
+</div>
+
+<div class="card report-container">
+    <div class="report-header">
+        <h3>ترازنامه</h3>
+        <p>در تاریخ {{ today_date }}</p>
+    </div>
+
+    <div class="content-grid-half">
+        <div class="report-section">
+            <h4>دارایی ها (Assets)</h4>
+            <table class="report-table">
+                {% for account in assets %}
+                <tr>
+                    <td>{{ account.name }}</td>
+                    <td class="amount">{{ "{:,.0f}".format(account.balance) }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td>جمع کل دارایی ها</td>
+                    <td class="amount">{{ "{:,.0f}".format(total_assets) }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="report-section">
+            <h4>بدهی ها و سرمایه (Liabilities & Equity)</h4>
+            <table class="report-table">
+                <tr class="group-header"><td colspan="2">بدهی ها (Liabilities)</td></tr>
+                {% for account in liabilities %}
+                <tr>
+                    <td>{{ account.name }}</td>
+                    <td class="amount">{{ "{:,.0f}".format(account.balance) }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="subtotal-row">
+                    <td>جمع بدهی ها</td>
+                    <td class="amount">{{ "{:,.0f}".format(total_liabilities) }}</td>
+                </tr>
+
+                <tr class="group-header"><td colspan="2">سرمایه (Equity)</td></tr>
+                {% for account in equity %}
+                <tr>
+                    <td>{{ account.name }}</td>
+                    <td class="amount">{{ "{:,.0f}".format(account.balance) }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="subtotal-row">
+                    <td>جمع سرمایه</td>
+                    <td class="amount">{{ "{:,.0f}".format(total_equity) }}</td>
+                </tr>
+
+                <tr class="total-row">
+                    <td>جمع کل بدهی ها و سرمایه</td>
+                    <td class="amount">{{ "{:,.0f}".format(total_liabilities + total_equity) }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

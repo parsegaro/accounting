@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}تراز آزمایشی{% endblock %}
+{% block content %}
+<div class="header-with-controls">
+    <h2>تراز آزمایشی (Trial Balance)</h2>
+    <button class="btn" onclick="window.print()">چاپ</button>
+</div>
+
+<div class="card report-container">
+    <div class="report-header">
+        <h3>تراز آزمایشی</h3>
+        <p>در تاریخ {{ today_date }}</p>
+    </div>
+
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>نام حساب</th>
+                <th class="amount">بدهکار (Debit)</th>
+                <th class="amount">بستانکار (Credit)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for account in accounts %}
+            <tr>
+                <td>{{ account.name }}</td>
+                <td class="amount">{% if account.debit > 0 %}{{ "{:,.0f}".format(account.debit) }}{% endif %}</td>
+                <td class="amount">{% if account.credit > 0 %}{{ "{:,.0f}".format(account.credit) }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td>جمع کل</td>
+                <td class="amount">{{ "{:,.0f}".format(debit_total) }}</td>
+                <td class="amount">{{ "{:,.0f}".format(credit_total) }}</td>
+            </tr>
+        </tfoot>
+    </table>
+    {% if (debit_total - credit_total) | abs > 0.01 %}
+    <div class="flash-error" style="margin-top: 1rem;">
+        <strong>خطا:</strong> جمع ستون بدهکار و بستانکار برابر نیست! ترازنامه شما بالانس نیست.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

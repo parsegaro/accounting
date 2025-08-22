@@ -2,8 +2,28 @@
 {% block title %}دفتر کل{% endblock %}
 {% block content %}
 <div class="header-with-controls">
-    <h2>دفتر کل (تمام تراکنش‌ها)</h2>
-    <a href="{{ url_for('export_ledger') }}" class="btn btn-secondary">خروجی CSV</a>
+    <h2>دفتر کل</h2>
+    <form method="get" class="form-inline">
+        <div class="form-group">
+            <label for="start_date">از تاریخ</label>
+            <input type="date" name="start_date" value="{{ start_date or '' }}" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="end_date">تا تاریخ</label>
+            <input type="date" name="end_date" value="{{ end_date or '' }}" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="account_id">فیلتر بر اساس حساب</label>
+            <select name="account_id" class="form-control">
+                <option value="">همه حساب‌ها</option>
+                {% for acc in accounts %}
+                <option value="{{ acc.id }}" {% if acc.id == selected_account_id %}selected{% endif %}>{{ acc.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn">فیلتر</button>
+        <a href="{{ url_for('export_ledger') }}" class="btn btn-secondary" style="margin-right: 1rem;">خروجی CSV</a>
+    </form>
 </div>
 
 <div class="card">
@@ -11,28 +31,37 @@
         <thead>
             <tr>
                 <th>تاریخ</th>
-                <th>شماره تراکنش</th>
                 <th>شرح</th>
                 <th>حساب</th>
                 <th style="text-align: left;">بدهکار (Debit)</th>
                 <th style="text-align: left;">بستانکار (Credit)</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
-            {% for entry in entries %}
-            <tr>
-                <td>{{ entry['date'] }}</td>
-                <td>{{ entry['transaction_id'] }}</td>
-                <td>{{ entry['description'] }}</td>
-                <td>{{ entry['account_name'] }}</td>
-                <td style="text-align: left; direction: ltr;">
-                    {% if entry['debit'] > 0 %}{{ "{:,.0f}".format(entry['debit']) }}{% endif %}
+        {% for transaction_id, items in entries | groupby('transaction_id') %}
+            {% set outer_loop = loop %}
+            {% for entry in items %}
+            <tr class="transaction-row-{{ 'even' if outer_loop.index is even else 'odd' }}">
+                <td>{% if loop.first %}{{ entry.date }}{% endif %}</td>
+                <td>{% if loop.first %}{{ entry.description }}{% endif %}</td>
+                <td>{{ entry.account_name }}</td>
+                <td class="amount">
+                    {% if entry.debit > 0 %}{{ "{:,.0f}".format(entry.debit) }}{% endif %}
                 </td>
-                <td style="text-align: left; direction: ltr;">
-                    {% if entry['credit'] > 0 %}{{ "{:,.0f}".format(entry['credit']) }}{% endif %}
+                <td class="amount">
+                    {% if entry.credit > 0 %}{{ "{:,.0f}".format(entry.credit) }}{% endif %}
+                </td>
+                <td class="action-cell">
+                    {% if loop.first %}
+                    <form action="{{ url_for('reverse_transaction', transaction_id=transaction_id) }}" method="post">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('آیا از معکوس کردن این تراکنش مطمئن هستید؟ این عمل غیرقابل بازگشت است.')">معکوس</button>
+                    </form>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
+        {% endfor %}
         </tbody>
     </table>
 </div>

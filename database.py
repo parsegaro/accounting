@@ -221,9 +221,22 @@ def delete_account(id):
     conn.commit()
     conn.close()
 
-def get_all_journal_entries():
+def get_transaction_by_id(transaction_id):
     conn = get_db_connection()
-    entries = conn.execute("""
+    trans = conn.execute('SELECT * FROM transactions WHERE id = ?', (transaction_id,)).fetchone()
+    conn.close()
+    return trans
+
+def get_journal_entries_by_transaction_id(transaction_id):
+    conn = get_db_connection()
+    entries = conn.execute('SELECT * FROM journal_entries WHERE transaction_id = ?', (transaction_id,)).fetchall()
+    conn.close()
+    return entries
+
+def get_journal_entries_filtered(start_date=None, end_date=None, account_id=None):
+    conn = get_db_connection()
+
+    query = """
         SELECT
             t.id as transaction_id,
             t.date,
@@ -234,8 +247,26 @@ def get_all_journal_entries():
         FROM journal_entries je
         JOIN transactions t ON je.transaction_id = t.id
         JOIN accounts a ON je.account_id = a.id
-        ORDER BY t.date DESC, t.id DESC, je.id ASC
-    """).fetchall()
+    """
+    params = []
+    where_clauses = []
+
+    if start_date:
+        where_clauses.append("t.date >= ?")
+        params.append(start_date)
+    if end_date:
+        where_clauses.append("t.date <= ?")
+        params.append(end_date)
+    if account_id:
+        where_clauses.append("je.account_id = ?")
+        params.append(account_id)
+
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
+
+    query += " ORDER BY t.date DESC, t.id DESC, je.id ASC"
+
+    entries = conn.execute(query, params).fetchall()
     conn.close()
     return entries
 

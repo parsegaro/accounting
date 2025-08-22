@@ -21,7 +21,14 @@
                         <a href="{{ url_for('ledger') }}">دفتر کل</a>
                     </div>
                 </div>
-                <a href="{{ url_for('reports') }}">گزارش‌ها</a>
+                <div class="nav-dropdown">
+                    <a href="#">گزارش‌ها</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('reports') }}">سود و زیان</a>
+                        <a href="{{ url_for('balance_sheet') }}">ترازنامه</a>
+                        <a href="{{ url_for('trial_balance') }}">تراز آزمایشی</a>
+                    </div>
+                </div>
                 <a href="{{ url_for('settings') }}">تنظیمات</a>
                 <a href="{{ url_for('logout') }}">خروج</a>
             {% endif %}
