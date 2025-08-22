@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}ویرایش خدمت{% endblock %}
+{% block content %}
+<div class="header-with-controls">
+    <h2>ویرایش خدمت: {{ service['name'] }}</h2>
+</div>
+
+<div class="card" style="max-width: 500px; margin: auto;">
+    <form method="post">
+        <div class="form-group">
+            <label for="service-name">نام خدمت</label>
+            <input type="text" id="service-name" name="name" class="form-control" value="{{ service['name'] }}" required>
+        </div>
+        <div class="form-group">
+            <label for="service-price">قیمت (ریال)</label>
+            <input type="number" id="service-price" name="price" class="form-control" value="{{ service['price'] }}" required>
+        </div>
+        <div class="form-group">
+            <label for="revenue-account">حساب درآمد مربوطه</label>
+            <select id="revenue-account" name="revenue_account_id" class="form-control" required>
+                {% for account in accounts %}
+                    {% if account['type'] == 'Revenue' %}
+                        <option value="{{ account['id'] }}" {% if account['id'] == service['revenue_account_id'] %}selected{% endif %}>
+                            {{ account['name'] }}
+                        </option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-inline" style="justify-content: flex-end; margin-top: 1.5rem;">
+            <a href="{{ url_for('settings') }}" class="btn btn-secondary">انصراف</a>
+            <button type="submit" class="btn">ذخیره تغییرات</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

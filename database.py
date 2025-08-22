@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from werkzeug.security import generate_password_hash
 
 DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'instance', 'clinic.db')
 
@@ -16,17 +17,41 @@ def init_db():
     cursor = conn.cursor()
 
     # Drop existing tables to start fresh (for development)
-    cursor.execute("DROP TABLE IF EXISTS service_payouts;")
+    # Order is important due to foreign keys
+    cursor.execute("DROP TABLE IF EXISTS journal_entries;")
     cursor.execute("DROP TABLE IF EXISTS transactions;")
+    cursor.execute("DROP TABLE IF EXISTS accounts;")
+    cursor.execute("DROP TABLE IF EXISTS service_payouts;")
     cursor.execute("DROP TABLE IF EXISTS services;")
     cursor.execute("DROP TABLE IF EXISTS staff;")
+    cursor.execute("DROP TABLE IF EXISTS users;")
+
+    # Create users table
+    cursor.execute("""
+    CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL
+    );
+    """)
+
+    # Create Chart of Accounts table
+    cursor.execute("""
+    CREATE TABLE accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        type TEXT NOT NULL CHECK(type IN ('Asset', 'Liability', 'Equity', 'Revenue', 'Expense'))
+    );
+    """)
 
     # Create services table
     cursor.execute("""
     CREATE TABLE services (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
-        price REAL NOT NULL
+        price REAL NOT NULL,
+        revenue_account_id INTEGER NOT NULL,
+        FOREIGN KEY (revenue_account_id) REFERENCES accounts (id)
     );
     """)
 
@@ -52,18 +77,25 @@ def init_db():
     );
     """)
 
-    # Create a unified transactions ledger
+    # Create transactions table (meta-data for a transaction)
     cursor.execute("""
     CREATE TABLE transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        transaction_type TEXT NOT NULL CHECK(transaction_type IN ('Income', 'Expense', 'Payable', 'Receivable')),
-        description TEXT NOT NULL,
-        amount REAL NOT NULL,
-        transaction_date TEXT NOT NULL,
-        entity_name TEXT,
-        related_service_id INTEGER,
-        is_settled BOOLEAN NOT NULL DEFAULT 0,
-        FOREIGN KEY (related_service_id) REFERENCES services (id)
+        date TEXT NOT NULL,
+        description TEXT NOT NULL
+    );
+    """)
+
+    # Create journal_entries table (the actual double-entry ledger)
+    cursor.execute("""
+    CREATE TABLE journal_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL,
+        debit REAL NOT NULL DEFAULT 0,
+        credit REAL NOT NULL DEFAULT 0,
+        FOREIGN KEY (transaction_id) REFERENCES transactions (id),
+        FOREIGN KEY (account_id) REFERENCES accounts (id)
     );
     """)
 
@@ -77,15 +109,48 @@ if __name__ == '__main__':
 def get_all_services():
     conn = get_db_connection()
     services = conn.execute('SELECT * FROM services ORDER BY name').fetchall()
-    print(f"---- FETCHED services: {[s['name'] for s in services]} ----")
     conn.close()
     return services
 
-def add_service(name, price):
+def add_service(name, price, revenue_account_id):
     conn = get_db_connection()
-    conn.execute('INSERT INTO services (name, price) VALUES (?, ?)', (name, price))
+    conn.execute('INSERT INTO services (name, price, revenue_account_id) VALUES (?, ?, ?)',
+                 (name, price, revenue_account_id))
     conn.commit()
-    print(f"---- COMMITTED service: {name} ----")
+    conn.close()
+
+def update_service(id, name, price, revenue_account_id):
+    conn = get_db_connection()
+    conn.execute('UPDATE services SET name = ?, price = ?, revenue_account_id = ? WHERE id = ?',
+                 (name, price, revenue_account_id, id))
+    conn.commit()
+    conn.close()
+
+def delete_service(id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM services WHERE id = ?', (id,))
+    conn.commit()
+    conn.close()
+
+def get_staff_by_id(id):
+    conn = get_db_connection()
+    staff = conn.execute('SELECT * FROM staff WHERE id = ?', (id,)).fetchone()
+    conn.close()
+    return staff
+
+def update_staff(id, name, payment_type, payment_rate):
+    conn = get_db_connection()
+    conn.execute('UPDATE staff SET name = ?, payment_type = ?, payment_rate = ? WHERE id = ?',
+                 (name, payment_type, payment_rate, id))
+    conn.commit()
+    conn.close()
+
+def delete_staff(id):
+    conn = get_db_connection()
+    # Also need to delete associated payouts
+    conn.execute('DELETE FROM service_payouts WHERE staff_id = ?', (id,))
+    conn.execute('DELETE FROM staff WHERE id = ?', (id,))
+    conn.commit()
     conn.close()
 
 def get_all_staff():
@@ -125,66 +190,111 @@ def get_service_by_id(service_id):
     conn.close()
     return service
 
-def add_transaction(trans_type, desc, amount, date, entity=None, service_id=None, settled=0):
+
+def get_accounts():
     conn = get_db_connection()
-    conn.execute("""
-        INSERT INTO transactions
-        (transaction_type, description, amount, transaction_date, entity_name, related_service_id, is_settled)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (trans_type, desc, amount, date, entity, service_id, settled))
+    accounts = conn.execute('SELECT * FROM accounts ORDER BY type, name').fetchall()
+    conn.close()
+    return accounts
+
+def add_account(name, type):
+    conn = get_db_connection()
+    conn.execute('INSERT INTO accounts (name, type) VALUES (?, ?)', (name, type))
     conn.commit()
     conn.close()
 
-def get_transactions_summary(start_date, end_date):
+def get_account_by_id(id):
     conn = get_db_connection()
-    summary = conn.execute("""
-        SELECT
-            SUM(CASE WHEN transaction_type = 'Income' THEN amount ELSE 0 END) as total_income,
-            SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END) as total_expenses
-        FROM transactions
-        WHERE transaction_date BETWEEN ? AND ?
-    """, (start_date, end_date)).fetchone()
+    account = conn.execute('SELECT * FROM accounts WHERE id = ?', (id,)).fetchone()
     conn.close()
-    return summary
+    return account
 
-def get_unsettled_ledger_totals():
+def update_account(id, name, type):
     conn = get_db_connection()
-    totals = conn.execute("""
-        SELECT
-            SUM(CASE WHEN transaction_type = 'Receivable' THEN amount ELSE 0 END) as total_receivables,
-            SUM(CASE WHEN transaction_type = 'Payable' THEN amount ELSE 0 END) as total_payables
-        FROM transactions
-        WHERE is_settled = 0 AND transaction_type IN ('Receivable', 'Payable')
-    """).fetchone()
+    conn.execute('UPDATE accounts SET name = ?, type = ? WHERE id = ?', (name, type, id))
+    conn.commit()
     conn.close()
-    return totals
 
-def get_daily_income_expense_series(start_date, end_date):
+def delete_account(id):
     conn = get_db_connection()
-    series = conn.execute("""
-        SELECT
-            transaction_date,
-            SUM(CASE WHEN transaction_type = 'Income' THEN amount ELSE 0 END) as daily_income,
-            SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END) as daily_expense
-        FROM transactions
-        WHERE transaction_date BETWEEN ? AND ?
-        GROUP BY transaction_date
-        ORDER BY transaction_date
-    """, (start_date, end_date)).fetchall()
+    conn.execute('DELETE FROM accounts WHERE id = ?', (id,))
+    conn.commit()
     conn.close()
-    return series
 
-def get_income_by_service(start_date, end_date):
+def get_all_journal_entries():
     conn = get_db_connection()
-    income_dist = conn.execute("""
+    entries = conn.execute("""
         SELECT
-            s.name,
-            SUM(t.amount) as total_amount
-        FROM transactions t
-        JOIN services s ON t.related_service_id = s.id
-        WHERE t.transaction_type = 'Income' AND t.transaction_date BETWEEN ? AND ?
-        GROUP BY s.name
-        ORDER BY total_amount DESC
-    """, (start_date, end_date)).fetchall()
+            t.id as transaction_id,
+            t.date,
+            t.description,
+            a.name as account_name,
+            je.debit,
+            je.credit
+        FROM journal_entries je
+        JOIN transactions t ON je.transaction_id = t.id
+        JOIN accounts a ON je.account_id = a.id
+        ORDER BY t.date DESC, t.id DESC, je.id ASC
+    """).fetchall()
     conn.close()
-    return income_dist
+    return entries
+
+def get_account_balances(start_date=None, end_date=None):
+    conn = get_db_connection()
+
+    query = """
+        SELECT
+            a.id,
+            a.name,
+            a.type,
+            SUM(je.debit) as total_debit,
+            SUM(je.credit) as total_credit
+        FROM accounts a
+        LEFT JOIN journal_entries je ON a.id = je.account_id
+        LEFT JOIN transactions t ON je.transaction_id = t.id
+    """
+    params = []
+    if start_date and end_date:
+        query += " WHERE t.date BETWEEN ? AND ?"
+        params.extend([start_date, end_date])
+
+    query += " GROUP BY a.id, a.name, a.type ORDER BY a.type, a.name"
+
+    balances = conn.execute(query, params).fetchall()
+    conn.close()
+    return balances
+
+def create_journal_entry(date, description, entries):
+    """
+    Creates a new transaction with multiple journal entries.
+    'entries' should be a list of tuples: (account_id, debit, credit)
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Create a new transaction meta-record
+    cursor.execute('INSERT INTO transactions (date, description) VALUES (?, ?)', (date, description))
+    transaction_id = cursor.lastrowid
+
+    # Add all journal entries for this transaction
+    for account_id, debit, credit in entries:
+        cursor.execute("""
+            INSERT INTO journal_entries (transaction_id, account_id, debit, credit)
+            VALUES (?, ?, ?, ?)
+        """, (transaction_id, account_id, debit, credit))
+
+    conn.commit()
+    conn.close()
+
+def add_user(username, password):
+    conn = get_db_connection()
+    conn.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)',
+                 (username, generate_password_hash(password)))
+    conn.commit()
+    conn.close()
+
+def get_user(username):
+    conn = get_db_connection()
+    user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+    conn.close()
+    return user

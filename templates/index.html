@@ -2,8 +2,18 @@
 {% block title %}داشبورد اصلی{% endblock %}
 {% block content %}
 <div class="header-with-controls">
-    <h2>داشبورد ({{ date_range }} روز گذشته)</h2>
-    <!-- Add controls for date range later -->
+    <h2>داشبورد</h2>
+    <form method="get" class="form-inline">
+        <div class="form-group">
+            <label for="start_date">از تاریخ</label>
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="end_date">تا تاریخ</label>
+            <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+        </div>
+        <button type="submit" class="btn">فیلتر</button>
+    </form>
 </div>
 
 <!-- Stat Cards -->

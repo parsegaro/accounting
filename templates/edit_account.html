@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}ویرایش حساب{% endblock %}
+{% block content %}
+<div class="header-with-controls">
+    <h2>ویرایش حساب: {{ account['name'] }}</h2>
+</div>
+
+<div class="card" style="max-width: 500px; margin: auto;">
+    <form method="post">
+        <div class="form-group">
+            <label for="account-name">نام حساب</label>
+            <input type="text" id="account-name" name="name" class="form-control" value="{{ account['name'] }}" required>
+        </div>
+        <div class="form-group">
+            <label for="account-type">نوع حساب</label>
+            <select id="account-type" name="type" class="form-control">
+                <option value="Asset" {% if account['type'] == 'Asset' %}selected{% endif %}>دارایی (Asset)</option>
+                <option value="Liability" {% if account['type'] == 'Liability' %}selected{% endif %}>بدهی (Liability)</option>
+                <option value="Equity" {% if account['type'] == 'Equity' %}selected{% endif %}>سرمایه (Equity)</option>
+                <option value="Revenue" {% if account['type'] == 'Revenue' %}selected{% endif %}>درآمد (Revenue)</option>
+                <option value="Expense" {% if account['type'] == 'Expense' %}selected{% endif %}>هزینه (Expense)</option>
+            </select>
+        </div>
+        <div class="form-inline" style="justify-content: flex-end; margin-top: 1.5rem;">
+            <a href="{{ url_for('chart_of_accounts') }}" class="btn btn-secondary">انصراف</a>
+            <button type="submit" class="btn">ذخیره تغییرات</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

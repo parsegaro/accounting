@@ -11,13 +11,32 @@
     <header>
         <h1><a href="{{ url_for('index') }}">سیستم حسابداری کلینیک</a></h1>
         <nav>
-            <a href="{{ url_for('index') }}">داشبورد</a>
-            <a href="{{ url_for('data_entry') }}">ورود داده‌ها</a>
-            <a href="#">گزارش‌ها</a>
-            <a href="{{ url_for('settings') }}">تنظیمات</a>
+            {% if g.user %}
+                <a href="{{ url_for('index') }}">داشبورد</a>
+                <a href="{{ url_for('data_entry') }}">ورود داده‌ها</a>
+                <div class="nav-dropdown">
+                    <a href="#">حسابداری</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('chart_of_accounts') }}">لیست حساب‌ها</a>
+                        <a href="{{ url_for('ledger') }}">دفتر کل</a>
+                    </div>
+                </div>
+                <a href="{{ url_for('reports') }}">گزارش‌ها</a>
+                <a href="{{ url_for('settings') }}">تنظیمات</a>
+                <a href="{{ url_for('logout') }}">خروج</a>
+            {% endif %}
         </nav>
     </header>
     <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flashes">
+                {% for category, message in messages %}
+                    <div class="flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </main>
     <footer>

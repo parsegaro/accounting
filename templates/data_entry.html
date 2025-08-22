@@ -1,132 +1,124 @@
 {% extends "base.html" %}
-{% block title %}ورود داده‌های روزانه{% endblock %}
+{% block title %}ورود تراکنش‌ها{% endblock %}
 {% block content %}
-<h2>ورود داده‌های مالی</h2>
-
-<div class="settings-section">
-    <h3>ثبت درآمد روزانه</h3>
-    <div class="card">
-        <form action="{{ url_for('add_daily_income') }}" method="post">
-            <div class="form-group" style="max-width: 200px; margin-bottom: 1rem;">
-                <label for="transaction_date">تاریخ تراکنش</label>
-                <input type="date" id="transaction_date" name="transaction_date" value="{{ today }}" class="form-control" required>
-            </div>
-
-            <div id="income-entries">
-                <!-- Entry rows will be added here by JS -->
-            </div>
-
-            <button type="button" id="add-income-row" class="btn btn-secondary" style="margin-top: 1rem;">افزودن ردیف خدمت</button>
-            <hr>
-            <button type="submit" class="btn">ثبت کل درآمد</button>
-        </form>
-    </div>
+<div class="header-with-controls">
+    <h2>ثبت تراکنش‌های جدید</h2>
 </div>
 
-<!-- Expense Form -->
 <div class="settings-section">
     <h3>ثبت هزینه</h3>
     <div class="card">
+        <h4>فرم ثبت هزینه</h4>
         <form action="{{ url_for('add_expense') }}" method="post">
-            <div class="form-inline">
-                <div class="form-group" style="max-width: 200px;">
-                    <label for="expense-date">تاریخ</label>
-                    <input type="date" id="expense-date" name="transaction_date" value="{{ today }}" class="form-control" required>
-                </div>
-                <div class="form-group" style="flex-grow: 2;">
-                    <label for="expense-desc">شرح هزینه</label>
-                    <input type="text" id="expense-desc" name="description" class="form-control" required placeholder="مثال: خرید لوازم مصرفی">
-                </div>
-                <div class="form-group">
-                    <label for="expense-amount">مبلغ (ریال)</label>
-                    <input type="number" id="expense-amount" name="amount" class="form-control" required placeholder="500000">
-                </div>
-                <button type="submit" class="btn">ثبت هزینه</button>
+            <div class="form-group">
+                <label for="expense-date">تاریخ</label>
+                <input type="date" id="expense-date" name="date" value="{{ today }}" class="form-control" required>
             </div>
+            <div class="form-group">
+                <label for="expense-desc">شرح هزینه</label>
+                <input type="text" id="expense-desc" name="description" class="form-control" required placeholder="مثال: پرداخت قبض برق">
+            </div>
+            <div class="form-group">
+                <label for="expense-account">حساب هزینه (چیزی که بابتش پول پرداخت شد)</label>
+                <select id="expense-account" name="expense_account_id" class="form-control" required>
+                    {% for account in accounts %}{% if account.type == 'Expense' %}<option value="{{ account.id }}">{{ account.name }}</option>{% endif %}{% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="payment-account">حساب پرداخت (پولی که از آن کسر شد)</label>
+                <select id="payment-account" name="asset_account_id" class="form-control" required>
+                    {% for account in accounts %}{% if account.type == 'Asset' %}<option value="{{ account.id }}">{{ account.name }}</option>{% endif %}{% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="expense-amount">مبلغ (ریال)</label>
+                <input type="number" step="any" id="expense-amount" name="amount" class="form-control" required>
+            </div>
+            <button type="submit" class="btn">ثبت هزینه</button>
         </form>
     </div>
 </div>
 
-<!-- Ledger Entry Form -->
 <div class="settings-section">
-    <h3>ثبت بدهی/طلب در دفتر کل</h3>
+    <h3>ثبت درآمد از خدمات</h3>
     <div class="card">
-        <form action="{{ url_for('add_ledger_entry') }}" method="post">
-            <div class="form-inline">
-                <div class="form-group" style="max-width: 200px;">
-                    <label for="ledger-date">تاریخ</label>
-                    <input type="date" id="ledger-date" name="transaction_date" value="{{ today }}" class="form-control" required>
+        <h4>فرم ثبت درآمد</h4>
+        <p><small>توجه: این فرم به صورت خودکار یک بدهی در حساب "دریافتنی‌ها" ایجاد می‌کند. دریافت وجه نقد باید به صورت یک تراکنش جداگانه ثبت شود.</small></p>
+        <form action="{{ url_for('add_income') }}" method="post">
+             <div class="form-group">
+                <label for="income-date">تاریخ</label>
+                <input type="date" id="income-date" name="date" value="{{ today }}" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="income-service">خدمت ارائه شده</label>
+                <select id="income-service" name="service_id" class="form-control" required>
+                    {% for service in services %}<option value="{{ service.id }}">{{ service.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="income-qty">تعداد</label>
+                <input type="number" id="income-qty" name="quantity" value="1" class="form-control" required>
+            </div>
+             <div class="form-group">
+                <label for="customer-name">نام مشتری/بیمار</label>
+                <input type="text" id="customer-name" name="customer_name" class="form-control" required placeholder="نام شخص">
+            </div>
+            <button type="submit" class="btn">ثبت درآمد</button>
+        </form>
+    </div>
+</div>
+
+<div class="settings-section">
+    <h3>ثبت دریافت و پرداخت</h3>
+    <div class="content-grid-half">
+        <div class="card">
+            <h4>فرم ثبت دریافت وجه</h4>
+            <form action="{{ url_for('receive_payment') }}" method="post">
+                <div class="form-group">
+                    <label for="payment-date">تاریخ</label>
+                    <input type="date" id="payment-date" name="date" value="{{ today }}" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="ledger-type">نوع</label>
-                    <select id="ledger-type" name="type" class="form-control">
-                        <option value="Receivable">طلب (باید دریافت کنم)</option>
-                        <option value="Payable">بدهی (باید پرداخت کنم)</option>
+                    <label for="customer-name-payment">از طرف (مشتری/بیمار)</label>
+                    <input type="text" id="customer-name-payment" name="customer_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="payment-amount">مبلغ دریافت شده (ریال)</label>
+                    <input type="number" step="any" id="payment-amount" name="amount" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="deposit-account">واریز به حساب</label>
+                    <select id="deposit-account" name="asset_account_id" class="form-control" required>
+                        {% for account in accounts %}{% if account.type == 'Asset' %}<option value="{{ account.id }}">{{ account.name }}</option>{% endif %}{% endfor %}
                     </select>
                 </div>
+                <button type="submit" class="btn">ثبت دریافت</button>
+            </form>
+        </div>
+        <div class="card">
+            <h4>فرم پرداخت بدهی</h4>
+            <form action="{{ url_for('pay_bill') }}" method="post">
                 <div class="form-group">
-                    <label for="ledger-entity">طرف حساب</label>
-                    <input type="text" id="ledger-entity" name="entity_name" class="form-control" required placeholder="نام بیمار، تامین‌کننده و...">
-                </div>
-                <div class="form-group" style="flex-grow: 1;">
-                    <label for="ledger-desc">شرح</label>
-                    <input type="text" id="ledger-desc" name="description" class="form-control" required placeholder="مثال: مابقی هزینه اندوسکوپی">
+                    <label for="bill-date">تاریخ</label>
+                    <input type="date" id="bill-date" name="date" value="{{ today }}" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="ledger-amount">مبلغ (ریال)</label>
-                    <input type="number" id="ledger-amount" name="amount" class="form-control" required>
+                    <label for="vendor-name">به (تامین‌کننده/کارمند)</label>
+                    <input type="text" id="vendor-name" name="vendor_name" class="form-control" required>
                 </div>
-                <button type="submit" class="btn">ثبت در دفتر</button>
-            </div>
-        </form>
+                <div class="form-group">
+                    <label for="bill-amount">مبلغ پرداخت شده (ریال)</label>
+                    <input type="number" step="any" id="bill-amount" name="amount" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="payout-account">پرداخت از حساب</label>
+                    <select id="payout-account" name="asset_account_id" class="form-control" required>
+                        {% for account in accounts %}{% if account.type == 'Asset' %}<option value="{{ account.id }}">{{ account.name }}</option>{% endif %}{% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn">ثبت پرداخت</button>
+            </form>
+        </div>
     </div>
 </div>
-
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const services = {{ services|tojson }};
-    const container = document.getElementById('income-entries');
-    const addRowBtn = document.getElementById('add-income-row');
-
-    function createRow() {
-        const row = document.createElement('div');
-        row.className = 'form-inline';
-        row.style.marginBottom = '1rem';
-        row.style.paddingBottom = '1rem';
-        row.style.borderBottom = '1px solid #333';
-
-        let options = services.map(s => `<option value="${s.id}">${s.name} (${s.price} ریال)</option>`).join('');
-
-        row.innerHTML = `
-            <div class="form-group">
-                <label>خدمت</label>
-                <select name="service_id[]" class="form-control" required>${options}</select>
-            </div>
-            <div class="form-group">
-                <label>تعداد</label>
-                <input type="number" name="quantity[]" class="form-control" value="1" min="1" required>
-            </div>
-            <button type="button" class="btn btn-danger remove-row-btn" style="align-self: flex-end;">حذف</button>
-        `;
-
-        container.appendChild(row);
-    }
-
-    if (services.length > 0) {
-        createRow();
-    } else {
-        container.innerHTML = '<p>برای ثبت درآمد، ابتدا باید حداقل یک خدمت را در صفحه <a href="{{ url_for("settings") }}">تنظیمات</a> تعریف کنید.</p>';
-        addRowBtn.style.display = 'none';
-    }
-
-    addRowBtn.addEventListener('click', createRow);
-
-    container.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('remove-row-btn')) {
-            e.target.closest('.form-inline').remove();
-        }
-    });
-});
-</script>
 {% endblock %}

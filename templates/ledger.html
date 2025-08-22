@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}دفتر کل{% endblock %}
+{% block content %}
+<div class="header-with-controls">
+    <h2>دفتر کل (تمام تراکنش‌ها)</h2>
+    <a href="{{ url_for('export_ledger') }}" class="btn btn-secondary">خروجی CSV</a>
+</div>
+
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>تاریخ</th>
+                <th>شماره تراکنش</th>
+                <th>شرح</th>
+                <th>حساب</th>
+                <th style="text-align: left;">بدهکار (Debit)</th>
+                <th style="text-align: left;">بستانکار (Credit)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td>{{ entry['date'] }}</td>
+                <td>{{ entry['transaction_id'] }}</td>
+                <td>{{ entry['description'] }}</td>
+                <td>{{ entry['account_name'] }}</td>
+                <td style="text-align: left; direction: ltr;">
+                    {% if entry['debit'] > 0 %}{{ "{:,.0f}".format(entry['debit']) }}{% endif %}
+                </td>
+                <td style="text-align: left; direction: ltr;">
+                    {% if entry['credit'] > 0 %}{{ "{:,.0f}".format(entry['credit']) }}{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

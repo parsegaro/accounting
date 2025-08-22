@@ -10,11 +10,22 @@
         <form action="{{ url_for('add_service') }}" method="post" class="form-inline">
             <div class="form-group">
                 <label for="service-name">نام خدمت</label>
-                <input type="text" id="service-name" name="name" required>
+                <input type="text" id="service-name" name="name" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="service-price">قیمت (ریال)</label>
-                <input type="number" step="any" id="service-price" name="price" required>
+                <input type="number" step="any" id="service-price" name="price" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="revenue-account">حساب درآمد</label>
+                <select id="revenue-account" name="revenue_account_id" class="form-control" required>
+                    <option value="">انتخاب کنید...</option>
+                    {% for account in accounts %}
+                        {% if account['type'] == 'Revenue' %}
+                        <option value="{{ account['id'] }}">{{ account['name'] }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
             </div>
             <button type="submit" class="btn">افزودن</button>
         </form>
@@ -27,6 +38,7 @@
                 <tr>
                     <th>نام خدمت</th>
                     <th>قیمت</th>
+                    <th>حساب درآمد</th>
                     <th>عملیات</th>
                 </tr>
             </thead>
@@ -34,10 +46,19 @@
                 {% for service in services %}
                 <tr>
                     <td>{{ service['name'] }}</td>
-                    <td>{{ service['price'] | int }} ریال</td>
+                    <td>{{ "{:,.0f}".format(service['price']) }} ریال</td>
                     <td>
-                        <button class="btn btn-secondary">ویرایش</button>
-                        <button class="btn btn-danger">حذف</button>
+                        {% for account in accounts %}
+                            {% if account['id'] == service['revenue_account_id'] %}
+                                {{ account['name'] }}
+                            {% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('edit_service', id=service['id']) }}" class="btn btn-sm btn-secondary">ویرایش</a>
+                        <form action="{{ url_for('delete_service', id=service['id']) }}" method="post" style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('آیا از حذف این خدمت مطمئن هستید؟')">حذف</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
@@ -91,14 +112,16 @@
                     <td>{{ {'Monthly': 'ماهانه', 'Hourly': 'ساعتی', 'Percentage': 'درصدی'}[person['payment_type']] }}</td>
                     <td>
                         {% if person['payment_type'] != 'Percentage' %}
-                            {{ person['payment_rate'] | int }} ریال
+                            {{ "{:,.0f}".format(person['payment_rate']) }} ریال
                         {% else %}
                             -
                         {% endif %}
                     </td>
                     <td>
-                        <button class="btn btn-secondary">ویرایش</button>
-                        <button class="btn btn-danger">حذف</button>
+                        <a href="{{ url_for('edit_staff', id=person['id']) }}" class="btn btn-sm btn-secondary">ویرایش</a>
+                        <form action="{{ url_for('delete_staff', id=person['id']) }}" method="post" style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('آیا از حذف این عضو مطمئن هستید؟ حذف این عضو باعث حذف شدن قوانین سهم مربوط به او نیز می‌شود.')">حذف</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}

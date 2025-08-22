@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}گزارش سود و زیان{% endblock %}
+{% block content %}
+<div class="header-with-controls">
+    <h2>گزارش سود و زیان (Statement of Profit & Loss)</h2>
+    <form method="get" class="form-inline">
+        <div class="form-group">
+            <label for="start_date">از تاریخ</label>
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="end_date">تا تاریخ</label>
+            <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+        </div>
+        <button type="submit" class="btn">فیلتر</button>
+        <button type="button" class="btn btn-secondary" onclick="window.print()" style="margin-right: 1rem;">چاپ</button>
+    </form>
+</div>
+
+<div class="card report-container">
+    <div class="report-header">
+        <h3>صورت سود و زیان</h3>
+        <p>برای دوره از {{ start_date }} تا {{ end_date }}</p>
+    </div>
+
+    <div class="report-section">
+        <h4>درآمد ها (Revenue)</h4>
+        <table class="report-table">
+            {% for account in revenue_accounts %}
+            <tr>
+                <td>{{ account.name }}</td>
+                <td class="amount">{{ "{:,.0f}".format(account.balance) }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td>جمع کل درآمد</td>
+                <td class="amount">{{ "{:,.0f}".format(total_revenue) }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h4>هزینه ها (Expenses)</h4>
+        <table class="report-table">
+            {% for account in expense_accounts %}
+            <tr>
+                <td>{{ account.name }}</td>
+                <td class="amount">{{ "{:,.0f}".format(account.balance) }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td>جمع کل هزینه ها</td>
+                <td class="amount">{{ "{:,.0f}".format(total_expense) }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="report-footer">
+        <h4>سود خالص (Net Profit)</h4>
+        <h4 class="amount {% if net_profit < 0 %}text-danger{% endif %}">{{ "{:,.0f}".format(net_profit) }}</h4>
+    </div>
+</div>
+{% endblock %}
