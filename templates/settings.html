@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}تنظیمات{% endblock %}
+{% block content %}
+<h2>تنظیمات سیستم</h2>
+
+<div class="settings-section">
+    <h3>مدیریت خدمات</h3>
+    <div class="card">
+        <h4>افزودن خدمت جدید</h4>
+        <form action="{{ url_for('add_service') }}" method="post" class="form-inline">
+            <div class="form-group">
+                <label for="service-name">نام خدمت</label>
+                <input type="text" id="service-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="service-price">قیمت (ریال)</label>
+                <input type="number" step="any" id="service-price" name="price" required>
+            </div>
+            <button type="submit" class="btn">افزودن</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h4>لیست خدمات موجود</h4>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>نام خدمت</th>
+                    <th>قیمت</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for service in services %}
+                <tr>
+                    <td>{{ service['name'] }}</td>
+                    <td>{{ service['price'] | int }} ریال</td>
+                    <td>
+                        <button class="btn btn-secondary">ویرایش</button>
+                        <button class="btn btn-danger">حذف</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Staff Management -->
+<div class="settings-section">
+    <h3>مدیریت کارمندان و پزشکان</h3>
+    <div class="card">
+        <h4>افزودن عضو جدید</h4>
+        <form action="{{ url_for('add_staff') }}" method="post" class="form-inline">
+            <div class="form-group">
+                <label for="staff-name">نام</label>
+                <input type="text" id="staff-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="staff-payment-type">نوع پرداخت</label>
+                <select id="staff-payment-type" name="payment_type" class="form-control">
+                    <option value="Monthly">ماهانه</option>
+                    <option value="Hourly">ساعتی</option>
+                    <option value="Percentage">درصدی</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="staff-payment-rate">نرخ پرداخت (ریال)</label>
+                <input type="number" step="any" id="staff-payment-rate" name="payment_rate" value="0" required>
+                <small>برای نوع درصدی، این مقدار نادیده گرفته میشود.</small>
+            </div>
+            <button type="submit" class="btn">افزودن</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h4>لیست کارمندان و پزشکان</h4>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>نام</th>
+                    <th>نوع پرداخت</th>
+                    <th>نرخ پرداخت</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for person in staff %}
+                <tr>
+                    <td>{{ person['name'] }}</td>
+                    <td>{{ {'Monthly': 'ماهانه', 'Hourly': 'ساعتی', 'Percentage': 'درصدی'}[person['payment_type']] }}</td>
+                    <td>
+                        {% if person['payment_type'] != 'Percentage' %}
+                            {{ person['payment_rate'] | int }} ریال
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-secondary">ویرایش</button>
+                        <button class="btn btn-danger">حذف</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Payout Management -->
+<div class="settings-section">
+    <h3>مدیریت سهم‌ها (revenue sharing)</h3>
+    <div class="card">
+        <h4>تعریف سهم برای خدمات</h4>
+        <form action="{{ url_for('add_payout') }}" method="post" class="form-inline">
+            <div class="form-group">
+                <label for="payout-service">انتخاب خدمت</label>
+                <select id="payout-service" name="service_id" class="form-control" required>
+                    {% for service in services %}
+                    <option value="{{ service['id'] }}">{{ service['name'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="payout-staff">انتخاب شخص یا کلینیک</label>
+                <select id="payout-staff" name="staff_id" class="form-control" required>
+                    <option value="clinic">سهم کلینیک</option>
+                    {% for person in staff %}
+                        {% if person['payment_type'] == 'Percentage' %}
+                        <option value="{{ person['id'] }}">{{ person['name'] }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="payout-percentage">درصد سهم (%)</label>
+                <input type="number" step="any" id="payout-percentage" name="percentage" required placeholder="مثلا: 40">
+            </div>
+            <button type="submit" class="btn">افزودن سهم</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h4>لیست سهم‌های تعریف شده</h4>
+        <div class="payout-list">
+            {% for service in services_with_payouts %}
+            <div class="payout-service-group">
+                <h5>
+                    {{ service['name'] }}
+                    <span class="percentage-total {% if service['total_percentage'] != 100 %}text-danger{% endif %}">
+                        (مجموع: {{ service['total_percentage'] }}%)
+                    </span>
+                </h5>
+                {% if service['payouts'] %}
+                    <ul>
+                    {% for payout in service['payouts'] %}
+                        <li>
+                            <strong>{{ payout['staff_name'] or 'کلینیک' }}:</strong> {{ payout['percentage'] }}%
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p><small>هنوز سهمی برای این خدمت تعریف نشده است.</small></p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
